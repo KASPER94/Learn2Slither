@@ -21,6 +21,7 @@ class SnakeEnv:
     def __init__(self, size=GRID_SIZE):
         self.dir = "RIGHT"
         self.size = size
+        self.green_apples = []
         self.reset()
 
     def reset(self):
@@ -77,6 +78,7 @@ class SnakeEnv:
         print(f"Initial direction: {self.dir}")
         
         self.spawn_apples()
+        self.spawn_red_apples_only()
 
     def validate_snake(self):
         """Vérifier que le serpent est entièrement dans les limites"""
@@ -90,12 +92,21 @@ class SnakeEnv:
 
     def spawn_apples(self):
         """Add apples on Snake Env"""
-        self.green_apples = []
-        while len(self.green_apples) < 2:
+        if self.green_apples == None:
+            self.green_apples = []
+        while len(self.green_apples) != 2:
             apple = (random.randint(0, self.size - 1), random.randint(0, self.size - 1))
             if apple not in self.snake and apple not in self.green_apples:
                 self.green_apples.append(apple)
                 
+        # while True:
+        #     red_apples = (random.randint(0, self.size - 1), random.randint(0, self.size - 1))
+        #     if red_apples not in self.snake and red_apples not in self.green_apples:
+        #         self.red_apples = red_apples
+        #         break
+            
+    def spawn_red_apples_only(self):
+        """Add apples on Snake Env"""
         while True:
             red_apples = (random.randint(0, self.size - 1), random.randint(0, self.size - 1))
             if red_apples not in self.snake and red_apples not in self.green_apples:
@@ -166,10 +177,10 @@ class SnakeEnv:
         if new_head in self.green_apples:
             self.green_apples.remove(new_head)
             self.update_snake_size(grow=True)
-            if len(self.green_apples) < 1:
-                self.spawn_apples()
-        elif new_head == self.red_apples:
+            # if len(self.green_apples) < 1:
             self.spawn_apples()
+        elif new_head == self.red_apples:
+            self.spawn_red_apples_only()
             return self.update_snake_size(shrink=True)
         else:
             self.update_snake_size()

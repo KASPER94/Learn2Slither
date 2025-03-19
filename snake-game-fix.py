@@ -26,7 +26,7 @@ class SnakeEnv:
 
     def reset(self):
         """Initialize new Snake Environment"""
-        self.board = np.zeros((self.size, self.size))
+        self.board = np.zeros((self.size, self.size), dtype = str)
         self.snake = []
         orientation = random.choice(["HORIZONTAL", "VERTICAL", "L"])
 
@@ -70,12 +70,12 @@ class SnakeEnv:
                 
         # Vérifier que tous les segments sont valides
         if not self.validate_snake():
-            print("Snake initialization invalid, retrying...")
+            # print("Snake initialization invalid, retrying...")
             self.reset()
             return
             
-        print(f"Snake initialized: {self.snake}")
-        print(f"Initial direction: {self.dir}")
+        # print(f"Snake initialized: {self.snake}")
+        # print(f"Initial direction: {self.dir}")
         
         self.spawn_apples()
         self.spawn_red_apples_only()
@@ -119,14 +119,14 @@ class SnakeEnv:
 
         # Vérifier les limites de la grille
         if x < 0 or x >= self.size or y < 0 or y >= self.size:
-            print(f"Wall collision at {point}")
+            # print(f"Wall collision at {point}")
             return True 
 
         # Vérifier les collisions avec le corps du serpent (sauf la queue qui va disparaître)
         # Si le snake doit grandir, la queue ne disparaîtra pas, donc il faut vérifier tout le corps
         for i in range(1, len(self.snake)):
             if point == self.snake[i]:
-                print(f"Self collision at {point} with segment {i}")
+                # print(f"Self collision at {point} with segment {i}")
                 return True
 
         return False  
@@ -165,10 +165,10 @@ class SnakeEnv:
         elif self.dir == "LEFT":
             new_head = (head_x, head_y - 1)  # Déplacement à gauche = diminuer la coordonnée y
         
-        print(f"Direction: {self.dir}, Head: {self.snake[0]}, New Head: {new_head}")
+        # print(f"Direction: {self.dir}, Head: {self.snake[0]}, New Head: {new_head}")
 
         if self.collision(new_head):
-            print(f"Game Over - Collision at {new_head}")
+            # print(f"Game Over - Collision at {new_head}")
             return False
         
         # Insérer la nouvelle tête à la position 0
@@ -211,6 +211,54 @@ def key_event(running, paused, snakeEnv):
     return running, paused
 
 def get_state(snake_env):
+    head = snake_env.snake[0]
+    head_x, head_y = head
+    dir = snake_env.dir
+    board = np.full((snake_env.size + 2, snake_env.size + 2), "0", dtype=str)
+    board[0, :] = "W"
+    board[:, 0] = "W"
+    board[:, -1] = "W"
+    board[-1, :] = "W"
+
+    for i, segment in enumerate(snake_env.snake):
+        x, y = segment
+        if i == 0:
+            board[x, y] = "H"
+        else:
+            board[x, y] = "S"
+    
+    for a in snake_env.green_apples:
+        x, y = a
+        board[x, y] = "G"
+
+    x, y = snake_env.red_apples
+    board[x, y] = "R"
+
+    vision = []
+    if dir == "UP":
+        for x in range(head_x - 1, -1, -1):
+            if board[x, head_y] == "S":
+                break
+            vision.append(board[x, head_y])
+    elif dir == "DOWN":
+        for x in range(head_x + 1, snake_env.size):
+            if board[x, head_y] == "S":
+                break
+            vision.append(board[x, head_y])
+    elif dir == "RIGHT":
+        for y in range(head_y + 1, snake_env.size):
+            if board[head_x, y] == "S":
+                break
+            vision.append(board[head_x, y])
+    elif dir == "LEFT":
+        for y in range(head_y - 1, -1, -1):
+            if board[head_x, y] == "S":
+                break
+            vision.append(board[head_x, y])
+    print(vision)
+    return vision
+
+def debug_state(snake_env):
     """return state of the game"""
     if len(snake_env.snake) < 3:
         print("Snake too short!")
@@ -251,7 +299,7 @@ if __name__ == "__main__":
         if not paused:
             game_status = snakeEnv.update_snake()
             if not game_status:
-                print("Resetting game...")
+                # print("Resetting game...")
                 snakeEnv.reset()
 
         screen.fill(BLACK)
@@ -274,6 +322,7 @@ if __name__ == "__main__":
             pg.draw.rect(screen, BLUE, (seg[1] * CELL_SIZE, seg[0] * CELL_SIZE, CELL_SIZE, CELL_SIZE))
         
         # Afficher l'état actuel
+        # debug_state(snakeEnv)
         get_state(snakeEnv)
         
         pg.display.flip()

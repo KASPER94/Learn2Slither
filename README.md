@@ -10,8 +10,9 @@
     source ~/.bashrc
 
     # 2. Créer l'environnement Conda
-    conda create --name 42AI-$USER python=3.7 jupyter pandas pycodestyle numpy pygame -y
+    conda create --name 42AI-$USER python=3.7 jupyter pandas pycodestyle numpy -y
     conda activate 42AI-$USER
+    pip install pygame
 
     # 3. Copier la bonne version de libstdc++.so.6 dans Conda
     cp /usr/lib/x86_64-linux-gnu/libstdc++.so.6* /goinfre/$USER/miniconda3/envs/42AI-$USER/lib/

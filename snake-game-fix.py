@@ -223,39 +223,34 @@ def get_state(snake_env):
     for i, segment in enumerate(snake_env.snake):
         x, y = segment
         if i == 0:
-            board[x, y] = "H"
+            board[x + 1, y  + 1] = "H"
         else:
-            board[x, y] = "S"
+            board[x + 1, y + 1] = "S"
     
     for a in snake_env.green_apples:
         x, y = a
-        board[x, y] = "G"
+        board[x + 1, y + 1] = "G"
 
     x, y = snake_env.red_apples
-    board[x, y] = "R"
+    board[x + 1, y + 1] = "R"
 
-    vision = []
-    if dir == "UP":
-        for x in range(head_x - 1, -1, -1):
-            if board[x, head_y] == "S":
-                break
-            vision.append(board[x, head_y])
-    elif dir == "DOWN":
-        for x in range(head_x + 1, snake_env.size):
-            if board[x, head_y] == "S":
-                break
-            vision.append(board[x, head_y])
-    elif dir == "RIGHT":
-        for y in range(head_y + 1, snake_env.size):
-            if board[head_x, y] == "S":
-                break
-            vision.append(board[head_x, y])
-    elif dir == "LEFT":
-        for y in range(head_y - 1, -1, -1):
-            if board[head_x, y] == "S":
-                break
-            vision.append(board[head_x, y])
-    print(vision)
+    vision = np.full((snake_env.size + 2, snake_env.size + 2), "", dtype=str)
+    "recupérer la vue du haut"
+    
+    for y in range(head_y, -1, -1):
+        vision[head_x, y] = board[head_x, y]
+    for y in range(head_y + 1, snake_env.size + 2, 1):
+        vision[head_x, y] = board[head_x, y]
+    for x in range(head_x, -1, -1):
+        vision[x, head_y] = board[x, head_y]
+    for x in range(head_x + 1, snake_env.size + 2, 1):
+        vision[x, head_y] = board[x, head_y]
+
+    x, y = vision.shape
+    for i in range(x):
+        for j in range(y):
+            print(vision[i, j], end=" ")  
+        print()
     return vision
 
 def debug_state(snake_env):

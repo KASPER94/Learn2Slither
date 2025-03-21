@@ -28,6 +28,7 @@ class SnakeEnv:
         """Initialize new Snake Environment"""
         self.board = np.zeros((self.size, self.size), dtype = str)
         self.snake = []
+        self.score = len(self.snake)
         orientation = random.choice(["HORIZONTAL", "VERTICAL", "L"])
 
         if orientation == "HORIZONTAL":
@@ -213,6 +214,8 @@ def key_event(running, paused, snakeEnv):
 def get_state(snake_env):
     head = snake_env.snake[0]
     head_x, head_y = head
+    head_y += 1
+    head_x += 1
     dir = snake_env.dir
     board = np.full((snake_env.size + 2, snake_env.size + 2), "0", dtype=str)
     board[0, :] = "W"
@@ -222,35 +225,71 @@ def get_state(snake_env):
 
     for i, segment in enumerate(snake_env.snake):
         x, y = segment
+        x += 1
+        y += 1
         if i == 0:
-            board[x + 1, y  + 1] = "H"
+            board[x, y] = "H"
         else:
-            board[x + 1, y + 1] = "S"
+            board[x, y] = "S"
     
     for a in snake_env.green_apples:
         x, y = a
-        board[x + 1, y + 1] = "G"
+        x += 1
+        y += 1
+        board[x, y] = "G"
 
     x, y = snake_env.red_apples
-    board[x + 1, y + 1] = "R"
+    x += 1
+    y += 1
+    board[x, y] = "R"
 
-    vision = np.full((snake_env.size + 2, snake_env.size + 2), "", dtype=str)
-    "recupérer la vue du haut"
-    
-    for y in range(head_y, -1, -1):
-        vision[head_x, y] = board[head_x, y]
-    for y in range(head_y + 1, snake_env.size + 2, 1):
-        vision[head_x, y] = board[head_x, y]
-    for x in range(head_x, -1, -1):
-        vision[x, head_y] = board[x, head_y]
-    for x in range(head_x + 1, snake_env.size + 2, 1):
-        vision[x, head_y] = board[x, head_y]
+    vision = np.full((snake_env.size + 2, snake_env.size + 2), " ", dtype=str)
+    if dir == "UP":
+        for y in range(head_y, -1, -1): 
+            vision[head_x, y] = board[head_x, y]
+        for y in range(head_y + 1, snake_env.size + 2, 1):
+            vision[head_x, y] = board[head_x, y]
+        for x in range(head_x - 1, -1, -1):
+            vision[x, head_y] = board[x, head_y]
+        for x in range(head_x + 1, snake_env.size + 2, 1):
+            vision[x, head_y] = board[x, head_y]
+
+    elif dir == "DOWN":
+        for y in range(head_y, snake_env.size + 2, 1):
+            vision[head_x, y] = board[head_x, y]
+        for y in range(head_y - 1, -1, -1):
+            vision[head_x, y] = board[head_x, y]
+        for x in range(head_x - 1, -1, -1):
+            vision[x, head_y] = board[x, head_y]
+        for x in range(head_x + 1, snake_env.size + 2, 1):
+            vision[x, head_y] = board[x, head_y]        
+
+    elif dir == "LEFT":
+        for x in range(head_x, -1, -1): 
+            vision[x, head_y] = board[x, head_y]
+        for x in range(head_x + 1, snake_env.size + 2, 1): 
+            vision[x, head_y] = board[x, head_y]
+        for y in range(head_y - 1, -1, -1):  
+            vision[head_x, y] = board[head_x, y]
+        for y in range(head_y + 1, snake_env.size + 2, 1):
+            vision[head_x, y] = board[head_x, y]
+
+    elif dir == "RIGHT":
+        for x in range(head_x, snake_env.size + 2, 1):
+            vision[x, head_y] = board[x, head_y]
+        for x in range(head_x - 1, -1, -1):
+            vision[x, head_y] = board[x, head_y]
+        for y in range(head_y - 1, -1, -1):
+            vision[head_x, y] = board[head_x, y]
+        for y in range(head_y + 1, snake_env.size + 2, 1):
+            vision[head_x, y] = board[head_x, y]
 
     x, y = vision.shape
     for i in range(x):
         for j in range(y):
             print(vision[i, j], end=" ")  
         print()
+    print(dir)
     return vision
 
 def debug_state(snake_env):
@@ -293,6 +332,7 @@ if __name__ == "__main__":
         
         if not paused:
             game_status = snakeEnv.update_snake()
+            snakeEnv.score = len(snakeEnv.snake) - 3
             if not game_status:
                 # print("Resetting game...")
                 snakeEnv.reset()
@@ -319,6 +359,7 @@ if __name__ == "__main__":
         # Afficher l'état actuel
         # debug_state(snakeEnv)
         get_state(snakeEnv)
+        print(snakeEnv.score)
         
         pg.display.flip()
         clock.tick(5)

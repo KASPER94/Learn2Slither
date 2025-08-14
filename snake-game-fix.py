@@ -2,7 +2,8 @@ import numpy as np
 import pygame as pg
 import random
 import os
-os.environ["SDL_VIDEODRIVER"] = "x11"  
+# os.environ["SDL_VIDEODRIVER"] = "x11"  
+os.environ["SDL_VIDEODRIVER"] = "cocoa"
 os.environ["SDL_RENDER_DRIVER"] = "software" 
 os.environ["LIBGL_ALWAYS_SOFTWARE"] = "1" 
 os.environ["MESA_LOADER_DRIVER_OVERRIDE"] = "swrast"

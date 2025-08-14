@@ -1,0 +1,23 @@
+[project]
+name = "learn2slither"
+version = "0.1.0"
+description = "Snake RL with Q-learning"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.3.1",
+    "pygame>=2.6.1",
+]
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = ["E203", "W503"]
+per-file-ignores = [
+    "main.py:E266",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+]

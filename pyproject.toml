@@ -5,9 +5,11 @@ description = "Snake RL with Q-learning"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "gymnasium>=1.2.0",
     "numpy>=1.26",
     "pandas>=2.3.1",
     "pygame>=2.6.1",
+    "torch>=2.8.0",
 ]
 
 [tool.flake8]

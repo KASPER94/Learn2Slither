@@ -12,9 +12,9 @@ from typing import Optional
 @dataclass
 class RewardConfig:
     death: float = -100.0
-    green: float = 10.0
-    red: float = -5.0
-    step: float = -0.05
+    green: float = 25.0
+    red: float = -25.0
+    step: float = -0.25
 
 
 def compute_reward(*, died: bool, ate_green: bool, ate_red: bool) -> float:

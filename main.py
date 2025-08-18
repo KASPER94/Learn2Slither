@@ -27,6 +27,7 @@ from learn2slither.q_agent import QAgent
 from learn2slither.state import encode_state
 from learn2slither.render import draw_scene
 from learn2slither.controls import handle_events_for_manual, relative_action
+from learn2slither.dqn_agent import DQNAgent
 
 # ---------------------------------------------------------------------------
 # Utilitaires SDL + Pygame
@@ -170,9 +171,10 @@ def evaluate_visual(load_model: str | None) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="learn2slither-main")
+    parser.add_argument("--model_type", type=str, default="q_agent", help="type of model to use: q_agent, dqn_agent, etc.")
     parser.add_argument("--train", action="store_true", help="mode entraînement headless")
-    parser.add_argument("--episodes", type=int, default=100)
-    parser.add_argument("--max-steps", type=int, default=500)
+    parser.add_argument("--episodes", type=int, default=1000)
+    parser.add_argument("--max-steps", type=int, default=100)
     parser.add_argument("--verbose", action="store_true", help="logs par épisode")
     parser.add_argument("--save-model", type=str, default=None, help="chemin JSON pour sauvegarder la Q-table")
     parser.add_argument("--load-model", type=str, default=None, help="chemin JSON à charger avant l'entraînement")
@@ -185,6 +187,15 @@ if __name__ == "__main__":
     args = build_parser().parse_args()
     if args.vision:
         evaluate_visual(args.load_model)
+    elif args.model_type == "dqn_agent":
+        train_dqn(
+            args.episodes,
+            args.max_steps,
+            verbose=args.verbose,
+            save_model=args.save_model,
+            load_model=args.load_model,
+            save_every=args.save_every,
+        )
     elif args.train:
         train(
             args.episodes,

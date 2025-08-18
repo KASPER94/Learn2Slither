@@ -89,8 +89,8 @@ class QAgent:
             n_actions=data.get("n_actions", 3),
             alpha=data.get("alpha", 0.1),
             gamma=data.get("gamma", 0.95),
-            epsilon=data.get("epsilon", 1.0),
-            epsilon_min=data.get("epsilon_min", 0.05),
+            epsilon=data.get("epsilon", 0.9),
+            epsilon_min=data.get("epsilon_min", 0.2),
             epsilon_decay=data.get("epsilon_decay", 0.995),
             learning_enabled=data.get("learning_enabled", True),
         )

@@ -1,21 +1,20 @@
-"""Boucle d'entraînement/évaluation (implémentation minimale).
-
-Relie l'environnement, l'encodeur d'état et l'agent Q-learning.
-"""
+"""Trainer pour DQN Agent avec Snake Environment."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Optional
 
+import torch
+import numpy as np
 from .env import SnakeEnv
-from .q_agent import QAgent
+from .DQNAgent import DQNAgent
 from .rewards import compute_reward
 from .state import encode_state
 
 
 @dataclass
-class TrainConfig:
+class DQNTrainConfig:
     episodes: int = 100
     max_steps: int = 500
     headless: bool = True
@@ -25,34 +24,35 @@ class TrainConfig:
     save_every: int = 0  # 0 = sauvegarde uniquement en fin si chemin fourni
 
 
-class Trainer:
-    def __init__(self, env: Optional[SnakeEnv] = None, agent: Optional[QAgent] = None) -> None:
+class DQNTrainer:
+    def __init__(self, env: Optional[SnakeEnv] = None, agent: Optional[DQNAgent] = None) -> None:
         self.env = env or SnakeEnv(10)  # data from main.py par défaut
-        self.agent = agent or QAgent()
+        self.agent = agent or DQNAgent(state_size=128, action_size=3)  # data from state encoder
 
-    def _maybe_load(self, cfg: TrainConfig) -> None:
+    def _maybe_load(self, cfg: DQNTrainConfig) -> None:
         if cfg.load_model_path:
-            self.agent = QAgent.load(cfg.load_model_path)
+            self.agent.load(cfg.load_model_path)
 
-    def _maybe_save(self, cfg: TrainConfig) -> None:
+    def _maybe_save(self, cfg: DQNTrainConfig) -> None:
         if cfg.save_model_path:
             self.agent.save(cfg.save_model_path)
 
-    def train(self, cfg: TrainConfig) -> None:
-        """Boucle d'entraînement avec logs optionnels et sauvegardes."""
+    def train(self, cfg: DQNTrainConfig) -> None:
+        """Boucle d'entraînement DQN avec replay memory."""
         self._maybe_load(cfg)
         max_length_seen = 0  # data from user request: track max length during training
 
         for ep in range(1, cfg.episodes + 1):
             self.env.reset()  # data from SnakeEnv.reset()
-            s = encode_state(self.env.observation())
+            s = self._state_to_vector(encode_state(self.env.observation()))
             episode_reward = 0.0
             steps = 0
 
             for _ in range(cfg.max_steps):
+                # data from DQN: choose action and get next state
                 a = self.agent.choose_action(s)
                 step = self.env.step(a)
-                s2 = encode_state(self.env.observation())
+                s2 = self._state_to_vector(encode_state(self.env.observation()))
 
                 r = compute_reward(
                     died=step.done,
@@ -60,7 +60,13 @@ class Trainer:
                     ate_red=step.shrank,
                 )
                 episode_reward += r
-                self.agent.update(s, a, r, s2)
+                
+                # data from DQN: store experience in replay memory
+                self.agent.remember(s, a, r, s2, step.done)
+                
+                # data from DQN: train on batch
+                self.agent.replay()
+                
                 s = s2
                 steps += 1
                 if step.done:
@@ -89,19 +95,25 @@ class Trainer:
         if cfg.save_model_path and (cfg.save_every == 0 or cfg.episodes % cfg.save_every != 0):
             self._maybe_save(cfg)
 
-    def evaluate(self, episodes: int = 10, max_steps: int = 500) -> None:
+    def _state_to_vector(self, state_int: int) -> np.ndarray:
+        """Convertit l'état entier en vecteur one-hot de 128 dimensions."""
+        # data from state encoder: state_int is 0-127
+        vector = np.zeros(128, dtype=np.float32)
+        vector[state_int] = 1.0
+        return vector
+    
+    def evaluate(self, episodes: int = 100, max_steps: int = 100) -> None:
         """Boucle d'évaluation sans apprentissage."""
-        learning_state = self.agent.learning_enabled
-        self.agent.learning_enabled = False
+        self.agent.model.eval()  # data from PyTorch: set to evaluation mode
         try:
             for _ in range(episodes):
                 self.env.reset()
-                s = encode_state(self.env.observation())
+                s = self._state_to_vector(encode_state(self.env.observation()))
                 for _ in range(max_steps):
                     a = self.agent.choose_action(s)
                     step = self.env.step(a)
-                    s = encode_state(self.env.observation())
+                    s = self._state_to_vector(encode_state(self.env.observation()))
                     if step.done:
                         break
         finally:
-            self.agent.learning_enabled = learning_state 
+            self.agent.model.train()  # data from PyTorch: set back to training mode 

@@ -27,7 +27,7 @@ from learn2slither.q_agent import QAgent
 from learn2slither.state import encode_state
 from learn2slither.render import draw_scene
 from learn2slither.controls import handle_events_for_manual, relative_action
-from learn2slither.dqn_agent import DQNAgent
+from learn2slither.dqn_trainer import DQNTrainer
 
 # ---------------------------------------------------------------------------
 # Utilitaires SDL + Pygame
@@ -188,7 +188,7 @@ if __name__ == "__main__":
     if args.vision:
         evaluate_visual(args.load_model)
     elif args.model_type == "dqn_agent":
-        train_dqn(
+        DQNTrainer.train(
             args.episodes,
             args.max_steps,
             verbose=args.verbose,

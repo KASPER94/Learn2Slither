@@ -1,4 +1,8 @@
 __pycache__/
+*.pth
+*/__pycache__/*
+*/models/*
+*/__pycache__/
 *.py[cod]
 .pytest_cache/
 .mypy_cache/

@@ -6,6 +6,7 @@ se contente de gérer l'état du jeu et les transitions.
 
 from __future__ import annotations
 
+from ctypes import pointer
 import random
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
@@ -149,6 +150,10 @@ class SnakeEnv:
                 self.red_apples = red
                 break
 
+    def _has_red_apple(self, point: Coord) -> bool:
+        """Vérifie si une pomme rouge est à cette position."""
+        return self.red_apples is not None and point == self.red_apples
+
     def _collision(self, point: Coord) -> bool:
         """Collision mur ou corps (hors nouvelle tête)."""
         x, y = point
@@ -225,20 +230,53 @@ class SnakeEnv:
 
         grew = False
         shrank = False
+        
         if ate == "green":
             grew = True
-            # croissance: on garde la queue (ne pas pop)
-            self._update_snake_size(grow=True)
+            # CROISSANCE: nouvelle tête déjà ajoutée, on garde la queue
+            pass  # Ne rien faire = garder la queue = grandir
         elif ate == "red":
             shrank = True
+            # RÉTRÉCISSEMENT: retirer 2 segments
             if not self._update_snake_size(shrink=True):
                 return StepResult(done=True, grew=False, shrank=True)
         else:
-            # mouvement simple
-            self._update_snake_size()
+            # MOUVEMENT NORMAL: retirer la queue
+            self.snake.pop()  # Plus direct que _update_snake_size()
 
         self.score = len(self.snake) - 3
         return StepResult(done=False, grew=grew, shrank=shrank)
+
+
+
+    def step_dqn(self, action_vector: List[int]) -> tuple[float, bool, int]:
+        """Version du step compatible avec le DQN externe.
+        
+        Args:
+            action_vector: Vecteur d'action [0,0,1] style one-hot
+            
+        Returns:
+            tuple[float, bool, int]: (reward, done, score)
+        """
+        # Convertit le vecteur d'action en Action
+        action_index = action_vector.index(1)
+        action = Action(action_index)
+        
+        # Exécute le step normal
+        result = self.step(action)
+        
+        # Calcule la récompense
+        reward = 0.0
+        if result.done:
+            reward = -10.0
+        elif result.grew:
+            reward = 10.0
+        elif result.shrank:
+            reward = -5.0
+        else:
+            reward = -0.1  # Petit coût par step
+        
+        return reward, result.done, self.score
 
     def observation(self):
         """Retourne une observation brute (positions, direction, taille)."""

@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+import numpy as np
 import os
 
 class Linear_QNet(nn.Module):
@@ -27,6 +28,7 @@ class Linear_QNet(nn.Module):
         file_name = os.path.join(file_name)
         self.load_state_dict(torch.load(file_name))
         self.eval()
+        return self
         
 class QTrainer:
     def __init__(self, model, lr, gamma):
@@ -69,3 +71,69 @@ class QTrainer:
         loss.backward()
 
         self.optimizer.step()
+
+
+class Inference:
+    def __init__(self, model, input_size, hidden_size, output_size):
+        self.model = Linear_QNet(input_size, hidden_size, output_size)
+        self.model.load(model)
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+
+    def get_state(self, game):
+        head = game.snake[0]
+        point_l = (head[0], head[1] - 1)
+        point_r = (head[0], head[1] + 1)
+        point_u = (head[0] - 1, head[1])
+        point_d = (head[0] + 1, head[1])
+        
+        dir_l = game.dir == "LEFT"
+        dir_r = game.dir == "RIGHT"
+        dir_u = game.dir == "UP"
+        dir_d = game.dir == "DOWN"
+        # 4 directions to move: left, right, up, down
+
+        state = [
+            #11 values
+            # Danger straight
+            (dir_r and game._collision(point_r)) or game._has_red_apple(point_r) or
+            (dir_l and game._collision(point_l)) or game._has_red_apple(point_l) or
+            (dir_u and game._collision(point_u)) or game._has_red_apple(point_u) or
+            (dir_d and game._collision(point_d)) or game._has_red_apple(point_d),
+
+            # Danger right
+            (dir_u and game._collision(point_r)) or game._has_red_apple(point_r) or
+            (dir_d and game._collision(point_l)) or game._has_red_apple(point_l) or
+            (dir_l and game._collision(point_u)) or game._has_red_apple(point_u) or
+            (dir_r and game._collision(point_d)) or game._has_red_apple(point_d),
+            # Danger left
+            (dir_u and game._collision(point_l)) or game._has_red_apple(point_l) or
+            (dir_d and game._collision(point_r)) or game._has_red_apple(point_r) or
+            (dir_r and game._collision(point_u)) or game._has_red_apple(point_u) or
+            (dir_l and game._collision(point_d)) or game._has_red_apple(point_d),
+            # Move direction
+            dir_l,
+            dir_r,
+            dir_u,
+            dir_d,
+            # Food location
+            (game.green_apples[0][0] < game.snake[0][0]) if game.green_apples else False, # food left
+            (game.green_apples[0][0] > game.snake[0][0]) if game.green_apples else False, # food right
+            (game.green_apples[0][1] < game.snake[0][1]) if game.green_apples else False, # food up
+            (game.green_apples[0][1] > game.snake[0][1]) if game.green_apples else False # food down
+        ]
+
+        state = np.array(state)
+        state_tensor = torch.tensor(state, dtype=torch.float)
+        state_tensor = state_tensor.unsqueeze(0)
+        return state_tensor
+    
+    def get_action(self, state):
+        action_vector = [0, 0, 0]
+        with torch.no_grad():
+            q_values = self.model(state)
+            action = torch.argmax(q_values).item()
+            action_vector[action] = 1
+            print(f"Action: {action}")
+        return action_vector

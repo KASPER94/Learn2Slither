@@ -5,15 +5,25 @@ import torch.nn.functional as F
 import numpy as np
 import os
 
+class TargetNet(nn.Module):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+        
+    def forward(self, x):
+        return self.model(x)
+
 class Linear_QNet(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super().__init__()
         self.linear1 = nn.Linear(input_size, hidden_size)
-        self.linear2 = nn.Linear(hidden_size, output_size)
+        self.linear2 = nn.Linear(hidden_size, hidden_size)
+        self.linear3 = nn.Linear(hidden_size, output_size)
         
     def forward(self, x):
         x = F.relu(self.linear1(x))
-        x = self.linear2(x)
+        x = F.relu(self.linear2(x))
+        x = self.linear3(x)
         return x
     
     def save(self, file_name='model.pth'):
@@ -71,6 +81,85 @@ class QTrainer:
         loss.backward()
 
         self.optimizer.step()
+
+
+class DDQNTrainer:
+    """
+    Trainer pour Double DQN qui utilise deux réseaux pour réduire le biais de surestimation
+    - main_model: réseau principal utilisé pour sélectionner les actions
+    - target_model: réseau target utilisé pour évaluer les valeurs Q
+    """
+    def __init__(self, main_model, target_model, lr, gamma):
+        self.lr = lr
+        self.gamma = gamma
+        self.main_model = main_model
+        self.target_model = target_model
+        self.optimizer = optim.Adam(main_model.parameters(), lr=self.lr)
+        self.criterion = nn.MSELoss()
+        
+    def train_step(self, state, action, reward, next_state, done):
+        """
+        Étape d'entraînement Double DQN optimisée avec traitement vectorisé
+        """
+        state = torch.as_tensor(state, dtype=torch.float32)
+        next_state = torch.as_tensor(next_state, dtype=torch.float32)
+        reward = torch.as_tensor(reward, dtype=torch.float32)
+        done = torch.as_tensor(done, dtype=torch.bool)
+
+        # Gestion des dimensions : ajouter batch dimension si nécessaire
+        if state.dim() == 1:
+            state = state.unsqueeze(0)
+            next_state = next_state.unsqueeze(0)
+            reward = reward.unsqueeze(0) if reward.dim() == 0 else reward
+            done = done.unsqueeze(0) if done.dim() == 0 else done
+
+        # Conversion one-hot → indices si nécessaire
+        action = torch.as_tensor(action)
+        if action.dim() == 1 and len(action) > 1:  # One-hot vector
+            action = action.argmax().unsqueeze(0)
+        elif action.dim() == 2:  # Batch of one-hot vectors
+            action = action.argmax(dim=1)
+        else:  # Déjà des indices
+            action = action.long()
+            if action.dim() == 0:  # Scalaire
+                action = action.unsqueeze(0)
+
+        # Q(s,a) actuel (réseau principal)
+        q_all = self.main_model(state)                           # [B, A]
+        q_sa = q_all.gather(1, action.unsqueeze(1)).squeeze(1)   # [B]
+
+        # Cible DDQN (sélection par main, évaluation par target), sans gradient
+        with torch.no_grad():
+            next_q_main = self.main_model(next_state)            # [B, A]
+            best_next_act = next_q_main.argmax(dim=1)            # [B]
+            next_q_target = self.target_model(next_state)        # [B, A]
+            next_q_t_sa = next_q_target.gather(1, best_next_act.unsqueeze(1)).squeeze(1)
+            next_q_t_sa = next_q_t_sa * (~done)                 # 0 si terminal
+            target_q = reward + self.gamma * next_q_t_sa         # [B]
+
+        # Perte et optimisation
+        self.optimizer.zero_grad(set_to_none=True)
+        loss = nn.SmoothL1Loss()(q_sa, target_q)                # Huber plus stable que MSE
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.main_model.parameters(), 10.0)
+        self.optimizer.step()
+
+        # Soft update à chaque step
+        self.soft_update()
+
+    def soft_update(self, tau=0.005):
+        """
+        Mise à jour douce du réseau target à chaque étape d'entraînement
+        """
+        with torch.no_grad():
+            for target_param, main_param in zip(self.target_model.parameters(), self.main_model.parameters()):
+                target_param.data.copy_(tau * main_param.data + (1 - tau) * target_param.data)
+        
+    def update_target_network(self):
+        """
+        Copie complète des poids (gardé pour compatibilité mais non utilisé)
+        """
+        self.target_model.load_state_dict(self.main_model.state_dict())
 
 
 class Inference:

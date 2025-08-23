@@ -12,6 +12,7 @@ import pygame as pg
 
 from .actions import Action, Direction, next_direction
 from .env import SnakeEnv
+from collections import deque
 
 
 def relative_action(current: Direction, desired: Direction) -> Action:
@@ -21,10 +22,10 @@ def relative_action(current: Direction, desired: Direction) -> Action:
         return Action.TURN_LEFT
     return Action.TURN_RIGHT
 
+KEY_BUFFER = deque(maxlen=2)  # persistant au module
 
-def handle_events_for_manual(env: SnakeEnv) -> Tuple[Optional[Action], bool, bool]:
-    """Lit les événements clavier et renvoie (action, quit, toggle_pause)."""
-    desired_dir: Optional[Direction] = None
+def handle_events_for_manual(env):
+    desired_dir = None
     quit_requested = False
     toggle_pause = False
 
@@ -32,20 +33,33 @@ def handle_events_for_manual(env: SnakeEnv) -> Tuple[Optional[Action], bool, boo
         if event.type == pg.QUIT:
             quit_requested = True
         elif event.type == pg.KEYDOWN:
-            if event.key in (pg.K_w, pg.K_UP) and env.dir != "DOWN":
-                desired_dir = "UP"
-            elif event.key in (pg.K_s, pg.K_DOWN) and env.dir != "UP":
-                desired_dir = "DOWN"
-            elif event.key in (pg.K_a, pg.K_LEFT) and env.dir != "RIGHT":
-                desired_dir = "LEFT"
-            elif event.key in (pg.K_d, pg.K_RIGHT) and env.dir != "LEFT":
-                desired_dir = "RIGHT"
-            elif event.key == pg.K_ESCAPE:
+            if event.key == pg.K_ESCAPE:
                 quit_requested = True
             elif event.key == pg.K_SPACE:
                 toggle_pause = True
+            elif event.key in (pg.K_q, pg.K_z, pg.K_s, pg.K_d, pg.K_UP, pg.K_DOWN, pg.K_LEFT, pg.K_RIGHT):
+                KEY_BUFFER.append(event.key)
 
-    action: Optional[Action] = None
-    if desired_dir is not None:
-        action = relative_action(env.dir, desired_dir)
-    return action, quit_requested, toggle_pause 
+    # Combinaisons ou dernière touche valable
+    if len(KEY_BUFFER) == 2:
+        first, second = KEY_BUFFER[0], KEY_BUFFER[1]
+        # à toi de définir une règle claire; sinon on garde la dernière touche:
+        key = second
+        KEY_BUFFER.clear()
+    elif len(KEY_BUFFER) == 1:
+        key = KEY_BUFFER[-1]
+        KEY_BUFFER.clear()
+    else:
+        key = None
+
+    if key == pg.K_z: desired_dir = "UP"
+    elif key == pg.K_UP: desired_dir = "UP"
+    elif key == pg.K_s: desired_dir = "DOWN"
+    elif key == pg.K_DOWN: desired_dir = "DOWN"
+    elif key == pg.K_q: desired_dir = "LEFT"
+    elif key == pg.K_LEFT: desired_dir = "LEFT"
+    elif key == pg.K_d: desired_dir = "RIGHT"
+    elif key == pg.K_RIGHT: desired_dir = "RIGHT"
+
+    action = relative_action(env.dir, desired_dir) if desired_dir else None
+    return action, quit_requested, toggle_pause

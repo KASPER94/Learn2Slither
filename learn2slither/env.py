@@ -182,6 +182,40 @@ class SnakeEnv:
             self.snake.pop()
         return True
 
+    def _get_state(self) -> List[int]:
+        """Retourne l'état actuel du jeu."""
+        return [
+            #11 values
+            # Danger straight
+            (self.dir == "UP" and self._collision((self.snake[0][0] - 1, self.snake[0][1]))) or
+            (self.dir == "DOWN" and self._collision((self.snake[0][0] + 1, self.snake[0][1]))) or
+            (self.dir == "LEFT" and self._collision((self.snake[0][0], self.snake[0][1] - 1))) or
+            (self.dir == "RIGHT" and self._collision((self.snake[0][0], self.snake[0][1] + 1))) or
+            self._has_red_apple(self.snake[0]),
+            # Danger right
+            (self.dir == "UP" and self._collision((self.snake[0][0] + 1, self.snake[0][1]))) or
+            (self.dir == "DOWN" and self._collision((self.snake[0][0] - 1, self.snake[0][1]))) or
+            (self.dir == "LEFT" and self._collision((self.snake[0][0], self.snake[0][1] + 1))) or
+            (self.dir == "RIGHT" and self._collision((self.snake[0][0], self.snake[0][1] - 1))) or
+            self._has_red_apple(self.snake[0]),
+            # Danger left
+            (self.dir == "UP" and self._collision((self.snake[0][0] - 1, self.snake[0][1]))) or
+            (self.dir == "DOWN" and self._collision((self.snake[0][0] + 1, self.snake[0][1]))) or
+            (self.dir == "LEFT" and self._collision((self.snake[0][0], self.snake[0][1] + 1))) or
+            (self.dir == "RIGHT" and self._collision((self.snake[0][0], self.snake[0][1] - 1))) or
+            self._has_red_apple(self.snake[0]),
+            # Move direction
+            self.dir == "UP",
+            self.dir == "DOWN",
+            self.dir == "LEFT",
+            self.dir == "RIGHT",
+            # Food location
+            (self.green_apples[0][0] < self.snake[0][0]) if self.green_apples else False,
+            (self.green_apples[0][0] > self.snake[0][0]) if self.green_apples else False,
+            (self.green_apples[0][1] < self.snake[0][1]) if self.green_apples else False,
+            (self.green_apples[0][1] > self.snake[0][1]) if self.green_apples else False
+        ]
+
     def _advance(self) -> Optional[str]:
         """Fait avancer le serpent d'une case.
 

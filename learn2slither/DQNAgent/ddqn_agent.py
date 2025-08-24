@@ -10,8 +10,8 @@ from .model import Linear_QNet, DDQNTrainer
 from .helper import plot
 
 MAX_MEMORY = 100_000
-BATCH_SIZE = 512
-LR = 0.0005
+BATCH_SIZE = 1000
+LR = 0.001
 TARGET_UPDATE_FREQUENCY = 100  # Fréquence de mise à jour du réseau target
 
 
@@ -102,6 +102,14 @@ class DDQNAgent:
         states, actions, rewards, next_states, dones = zip(*mini_sample)
         self.trainer.train_step(states, actions, rewards, next_states, dones)
 
+
+    def train_short_memory(self, state, action, reward, next_state, done):
+        """
+        Entraîne sur une seule expérience
+        """
+        self.trainer.train_step(state, action, reward, next_state, done)
+    
+
     def get_action(self, state):
         """
         Sélectionne une action en utilisant epsilon-greedy avec le réseau principal
@@ -110,7 +118,7 @@ class DDQNAgent:
         self.epsilon = max(0.01, 0.9 * (0.995 ** self.n_games))
         final_move = [0, 0, 0]
         
-        if random.randint(0, 200) < self.epsilon * 200:
+        if random.randint(0, 200) < self.epsilon:
             # Action aléatoire (exploration)
             move = random.randint(0, 2)
             final_move[move] = 1
@@ -152,7 +160,7 @@ def train():
     game = SnakeEnv()
     
     while True:
-        if agent.n_games > 3000:
+        if agent.n_games > 600:
             break
             
         # Obtenir l'état actuel
@@ -165,6 +173,8 @@ def train():
         reward, done, score = game.step_dqn(final_move)
         state_new = agent.get_state(game)
 
+        # Entraînement sur l'expérience immédiate
+        agent.train_short_memory(old_state, final_move, reward, state_new, done)
 
         # Stocker l'expérience
         agent.remember(old_state, final_move, reward, state_new, done)

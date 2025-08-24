@@ -118,18 +118,5 @@ def train_ddqn_demo(num_games=3000):
 
 
 if __name__ == "__main__":
-    print("Script de test Double DQN")
-    print("Choisissez une option:")
-    print("1. Comparer DQN vs Double DQN (agents non-entraînés)")
-    print("2. Démo d'entraînement Double DQN")
-    print("3. Les deux")
+    train_ddqn_demo()
     
-    choice = input("Votre choix (1/2/3): ").strip()
-    
-    if choice in ["1", "3"]:
-        compare_agents()
-    
-    if choice in ["2", "3"]:
-        train_ddqn_demo()
-    
-    print("\nTest terminé!") 
